@@ -4,6 +4,7 @@ import numpy as np
 from brainflow.board_shim import BoardShim, BrainFlowInputParams, BoardIds, BrainFlowError, LogLevels
 import faulthandler
 import csv
+import sys
 faulthandler.enable()
 
 def calculate_rms(signal):
@@ -16,8 +17,8 @@ def test_my_board():
     params = BrainFlowInputParams()    
     print(f"Using port scanning on {platform.system()} (will auto-detect port)")
     
-    params.timeout = 5
-    time_len = 10 # seconds
+    params.timeout = 10
+    time_len = 3       # Collect data for 3 seconds
     try:
         board = BoardShim(BoardIds.CERELOG_X8_BOARD, params)
         BoardShim.enable_dev_board_logger()
@@ -29,21 +30,18 @@ def test_my_board():
         print(f"EEG Channels : {eeg_channels}")
 
         board.prepare_session()
-        print("✓ Session prepared successfully")
+        print("[SUCCESS] Session prepared successfully")
 
         board.start_stream()
         print("... Stream started for {} seconds".format(time_len))
 
         time.sleep(time_len)  # Collect some data
-        #print("after sleep call")
         board.stop_stream()
         print("Stream time completed")
         data = board.get_board_data()
 
         print(f"Data shape: {data.shape}")
-        #print("First few data points:")
-        #print(data[:5, :10] if data.size > 0 else "No data collected")
-        print(f"✓ Got {data.shape[1]} samples")
+        print(f"[SUCCESS] Got {data.shape[1]} samples")
 
         # Calculate RMS for each EEG channel
         if data.size > 0:
@@ -72,10 +70,10 @@ def test_my_board():
                 writer.writerow([i] + [f"{data[ch][i]:.4f}" for ch in eeg_channels])
 
         board.release_session()
-        print("✓ Done!")
+        print("[SUCCESS] Done!")
 
     except BrainFlowError as e:
-        print(f"✗ Error: {e}")
+        print(f"[ERROR] Error: {e}")
 
 if __name__ == "__main__":
     test_my_board()
