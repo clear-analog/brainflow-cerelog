@@ -20,10 +20,10 @@ def analyze_timestamp_logs(log_file):
     """Parse log file for timestamp debugging information"""
     
     if not os.path.exists(log_file):
-        print(f"❌ Log file '{log_file}' not found")
+        print(f"[ERROR] Log file '{log_file}' not found")
         return
     
-    print(f"📋 Analyzing timestamp logs from: {log_file}")
+    print(f"[INFO] Analyzing timestamp logs from: {log_file}")
     print("=" * 60)
     
     timestamp_patterns = [
@@ -72,7 +72,7 @@ def analyze_timestamp_logs(log_file):
     
         # Display results
         if found_timestamps:
-            print("🕐 TIMESTAMP DEBUGGING INFO:")
+            print("[DEBUG] TIMESTAMP DEBUGGING INFO:")
             print("-" * 40)
             for ts_info in found_timestamps:
                 board_dt = datetime.fromtimestamp(ts_info['board_ts'])
@@ -81,39 +81,38 @@ def analyze_timestamp_logs(log_file):
                 print(f"Packet {ts_info['packet']}:")
                 print(f"  Board:    {ts_info['board_ts']:.2f} -> {board_dt.strftime('%H:%M:%S')}")
                 print(f"  System:   {ts_info['system_ts']:.2f} -> {system_dt.strftime('%H:%M:%S')}")
-                print(f"  Diff:     {ts_info['diff']:.2f}s")
-                print()
+                print(f"  Diff:     {ts_info['diff']:.2f}s\n")
         
         if found_ports:
-            print("🔌 PORT DETECTION INFO:")
+            print("[PORT] PORT DETECTION INFO:")
             print("-" * 40)
             for port_info in found_ports:
                 print(f"Line {port_info['line']}: {port_info['message']}")
-            print()
+            print("")
         
         if found_samples:
-            print("📊 SAMPLE DATA (most recent 3):")
+            print("[DATA] SAMPLE DATA (most recent 3):")
             print("-" * 40)
             for sample_info in found_samples[-3:]:  # Show last 3 instead of first 3
                 print(f"Line {sample_info['line']}: {sample_info['message']}")
-            print()
+            print("")
         
         if not found_timestamps and not found_ports and not found_samples:
-            print("❌ No timestamp debugging information found in log")
+            print("[ERROR] No timestamp debugging information found in log")
             print("   Make sure to run the test with debug logging enabled")
     
     except Exception as e:
-        print(f"❌ Error reading log file: {e}")
+        print(f"[ERROR] Error reading log file: {e}")
 
 def test_unix_timestamps():
     """Test Unix timestamp functionality"""
     params = BrainFlowInputParams()
     # Port scanning will automatically detect the correct port
     
-    print(f"🧪 Testing Unix Timestamps on {platform.system()} (will auto-detect port)")
+    print(f"[TEST] Testing Unix Timestamps on {platform.system()} (will auto-detect port)")
     print("=" * 60)
     
-    params.timeout = 5
+    params.timeout = 3
     time_len = 5  # seconds - shorter test to see timestamps
     log_file = 'test_unix_timestamps.log'
     
@@ -127,36 +126,36 @@ def test_unix_timestamps():
         eeg_channels = BoardShim.get_eeg_channels(BoardIds.CERELOG_X8_BOARD)
         timestamp_channel = BoardShim.get_timestamp_channel(BoardIds.CERELOG_X8_BOARD)
         
-        print(f"📊 Sample rate: {sample_rate} SPS")
-        print(f"📊 EEG channels: {eeg_channels}")
-        print(f"📊 Timestamp channel: {timestamp_channel}")
-        print()
+        print(f"[STATS] Sample rate: {sample_rate} SPS")
+        print(f"[STATS] EEG channels: {eeg_channels}")
+        print(f"[STATS] Timestamp channel: {timestamp_channel}")
+        print("")
 
         board.prepare_session()
-        print("✅ Session prepared successfully")
+        print("[SUCCESS] Session prepared successfully")
         
         board.start_stream()
-        print("✅ Stream started successfully")
+        print("[SUCCESS] Stream started successfully")
         
         # Collect data for specified duration
-        print(f"⏱️  Collecting data for {time_len} seconds...")
-        time.sleep(time_len)
+        print(f"[TIME] Collecting data for {time_len} seconds...")
+        time.sleep(time_len)  # Collect some data
         
         board.stop_stream()
-        print("✅ Stream stopped successfully")
+        print("[SUCCESS] Stream stopped successfully")
         
         # Get the data
         data = board.get_board_data()
         board.release_session()
         
-        print(f"📈 Collected {data.shape[1]} samples")
-        print()
+        print(f"[DATA] Collected {data.shape[1]} samples")
+        print("")
         
         # Analyze timestamps
         if timestamp_channel >= 0 and timestamp_channel < data.shape[0]:
             timestamps = data[timestamp_channel, :]
             
-            print("🕐 TIMESTAMP ANALYSIS:")
+            print("[TIMESTAMP] TIMESTAMP ANALYSIS:")
             print("-" * 40)
             
             # Show first few timestamps
@@ -169,7 +168,7 @@ def test_unix_timestamps():
                 else:
                     print(f"  Sample {i}: {timestamp:.2f} (invalid)")
             
-            print()
+            print("")
             
             # Show timestamp progression
             valid_timestamps = [t for t in timestamps if t > 0]
@@ -178,7 +177,7 @@ def test_unix_timestamps():
                 last_ts = valid_timestamps[-1]
                 duration = last_ts - first_ts
                 
-                print(f"📊 Timestamp Statistics:")
+                print(f"[STATS] Timestamp Statistics:")
                 print(f"  First timestamp: {first_ts:.2f} ({datetime.fromtimestamp(first_ts).strftime('%H:%M:%S')})")
                 print(f"  Last timestamp:  {last_ts:.2f} ({datetime.fromtimestamp(last_ts).strftime('%H:%M:%S')})")
                 print(f"  Duration:        {duration:.2f} seconds")
@@ -187,71 +186,71 @@ def test_unix_timestamps():
                 
                 # Check if timestamps are incrementing (old) or Unix (new)
                 if first_ts > 1700000000:  # If first timestamp is a large Unix timestamp (after 2023)
-                    print(f"  ✅ Detected: Unix timestamps (real time)")
-                    print(f"  📊 Format: Unix epoch seconds (e.g., {first_ts:.0f} = {datetime.fromtimestamp(first_ts).strftime('%Y-%m-%d %H:%M:%S')})")
+                    print(f"  [SUCCESS] Detected: Unix timestamps (real time)")
+                    print(f"  [INFO] Format: Unix epoch seconds (e.g., {first_ts:.0f} = {datetime.fromtimestamp(first_ts).strftime('%Y-%m-%d %H:%M:%S')})")
                 else:
-                    print(f"  ⚠️  Detected: Incrementing timestamps (counter)")
-                    print(f"  📊 Format: Packet counter (e.g., {first_ts:.0f} = packet #{first_ts:.0f})")
+                    print(f"  [WARNING] Detected: Incrementing timestamps (counter)")
+                    print(f"  [INFO] Format: Packet counter (e.g., {first_ts:.0f} = packet #{first_ts:.0f})")
                 
-                print()
-                print("🔄 COMPARISON:")
+                print("")
+                print("[COMPARE] COMPARISON:")
                 print("-" * 40)
                 print("OLD (Incrementing): 0, 1, 2, 3, 4, 5... (packet counter)")
                 print("NEW (Unix):        1703123456, 1703123457, 1703123458... (real time)")
-                print()
+                print("")
                 if first_ts > 1700000000:
-                    print("✅ SUCCESS: Unix timestamps are working!")
+                    print("[SUCCESS] SUCCESS: Unix timestamps are working!")
                     print("   - Timestamps represent real time")
                     print("   - Easy to correlate with system logs")
                     print("   - No complex synchronization needed")
                 else:
-                    print("⚠️  Still using old incrementing timestamps")
+                    print("[WARNING] Still using old incrementing timestamps")
                     print("   - Check if new firmware is uploaded")
                     print("   - Check if BrainFlow is rebuilt")
             
-            print()
+            print("")
             
             # Show system time comparison
             system_time = time.time()
-            print(f"🖥️  System time: {system_time:.2f} ({datetime.fromtimestamp(system_time).strftime('%H:%M:%S')})")
+            print(f"[SYSTEM] System time: {system_time:.2f} ({datetime.fromtimestamp(system_time).strftime('%H:%M:%S')})")
             
             if len(valid_timestamps) > 0:
                 latest_board_time = valid_timestamps[-1]
                 time_diff = system_time - latest_board_time
-                print(f"⏱️  Time difference (system - board): {time_diff:.2f} seconds")
+                print(f"[TIME] Time difference (system - board): {time_diff:.2f} seconds")
                 
                 if abs(time_diff) < 10:
-                    print("✅ Timestamps are well synchronized!")
+                    print("[SUCCESS] Timestamps are well synchronized!")
                 elif abs(time_diff) < 60:
-                    print("⚠️  Timestamps are roughly synchronized (within 1 minute)")
+                    print("[WARNING] Timestamps are roughly synchronized (within 1 minute)")
                 else:
-                    print("❌ Timestamps are not well synchronized")
+                    print("[ERROR] Timestamps are not well synchronized")
         
         else:
-            print("❌ No timestamp channel found in data")
+            print("[ERROR] No timestamp channel found in data")
         
-        print()
-        print("📋 Analyzing log file for detailed debugging...")
-        print()
+        print("")
+        print("[LOG] Analyzing log file for detailed debugging...")
+        print("")
         
         # Analyze the log file
         analyze_timestamp_logs(log_file)
         
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"[ERROR] Error: {e}")
         return False
     
     return True
 
 if __name__ == "__main__":
-    print("🧪 Cerelog X8 Unix Timestamp Test")
+    print("[TEST] Cerelog X8 Unix Timestamp Test")
     print("=" * 40)
-    print()
+    print("")
     
     success = test_unix_timestamps()
     
     if success:
-        print("✅ Test completed successfully!")
+        print("[SUCCESS] Test completed successfully!")
     else:
-        print("❌ Test failed!")
+        print("[ERROR] Test failed!")
         sys.exit(1) 
